@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="Offline prompt quality evaluator and enhancer for ChatGPT, Gemini, and other AI assistants.">
+  <title>Prompt Quality Studio — Offline Prompt Evaluator</title>
+  <style>
+    :root {
+      --ink:#172d3b; --muted:#617685; --line:#dce6eb; --blue:#245d9a; --blue-soft:#eaf3fb;
+      --paper:#fff; --bg:#f4f7f9; --success:#176854; --mint:#e9f6ef; --amber:#8e5c16; --amber-bg:#fff6e6;
+      --shadow:0 14px 38px rgba(19,43,63,.065); --radius:18px;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    button,select,textarea{font:inherit}
+    button{cursor:pointer;transition:background .12s,border-color .12s,transform .12s}
+    button:focus-visible,select:focus-visible,textarea:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid #8dbce9;outline-offset:2px}
+    button:disabled{cursor:not-allowed;opacity:.52}
+    .shell{max-width:1200px;padding:30px 22px 50px;margin:0 auto}
+    .top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:23px}
+    .eyebrow{font-weight:700;letter-spacing:.12em;font-size:11px;color:var(--blue);text-transform:uppercase}
+    h1{font-size:clamp(28px,3vw,39px);line-height:1.13;letter-spacing:-.045em;margin:8px 0 9px}
+    .lead{color:var(--muted);margin:0;max-width:710px;font-size:15px}
+    .privacy{display:flex;align-items:center;gap:8px;border:1px solid #cce5db;border-radius:99px;padding:8px 12px;color:var(--success);background:var(--mint);font-size:12px;white-space:nowrap;font-weight:700;margin-top:5px}
+    .dot{display:inline-block;width:8px;height:8px;background:#2e9a73;border-radius:50%}
+    .layout{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(340px,.92fr);gap:18px;align-items:start}
+    .card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px}
+    .section-top{display:flex;gap:12px;justify-content:space-between;align-items:start;margin-bottom:14px}
+    h2{font-size:18px;letter-spacing:-.025em;line-height:1.3;margin:0}
+    h3{font-size:15px;line-height:1.3;margin:0}
+    .sub{font-size:12px;color:var(--muted);margin:5px 0 0}
+    .small{font-size:12px;color:var(--muted)}
+    .fieldlabel{display:block;font-size:12px;font-weight:750;margin-bottom:7px;color:#3f5260}
+    textarea{width:100%;min-height:245px;resize:vertical;padding:15px;border:1px solid #cbd9e0;border-radius:13px;background:#fbfdfe;color:var(--ink);line-height:1.6}
+    textarea::placeholder{color:#8a9ca8}
+    .editor-foot{display:flex;justify-content:space-between;gap:8px;margin:7px 1px 17px;color:var(--muted);font-size:12px;flex-wrap:wrap}
+    .settings{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin:0 0 15px}
+    select{width:100%;border:1px solid #cfdae1;padding:10px 33px 10px 11px;background:#fff;border-radius:10px;color:var(--ink);height:43px}
+    .actions{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+    .btn{border-radius:11px;padding:10px 15px;font-weight:730;border:1px solid #cbd8e1;background:#fff;color:#24455c;min-height:42px}
+    .btn:hover:not(:disabled){background:#f2f7fa}
+    .btn.primary{background:var(--blue);color:white;border-color:var(--blue)}
+    .btn.primary:hover:not(:disabled){background:#194b7f}
+    .btn.ghost{border-color:transparent;color:var(--blue);background:transparent}
+    .btn.ghost:hover{background:var(--blue-soft)}
+    .btn.sm{min-height:33px;padding:5px 10px;font-size:12px;border-radius:9px}
+    .btn .kbd{font-size:10px;opacity:.8;margin-left:5px;font-weight:500}
+    .scorehead{display:flex;gap:18px;align-items:center;margin-bottom:16px}
+    .score-circle{--progress:0;display:grid;place-items:center;border-radius:50%;width:124px;height:124px;flex:0 0 124px;background:conic-gradient(var(--blue) calc(var(--progress)*1%),#ebf0f3 0);position:relative}
+    .score-circle::before{content:"";position:absolute;inset:9px;border-radius:50%;background:white}
+    .score-content{z-index:1;text-align:center;line-height:1.05}
+    .number{font-size:40px;letter-spacing:-.055em;font-weight:750;font-variant-numeric:tabular-nums}
+    .outof{font-size:12px;color:var(--muted);margin-top:3px}
+    .score-title{font-size:19px;font-weight:750;letter-spacing:-.025em;margin-bottom:3px}
+    .tag{display:inline-block;background:var(--blue-soft);color:#285985;font-size:11px;font-weight:700;padding:4px 9px;border-radius:7px;margin-top:8px}
+    .rubric-row{border-top:1px solid #e7eef1;padding:11px 0 10px}
+    .rubric-row:last-child{padding-bottom:0}
+    .rubric-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:13px;font-weight:700}
+    .rubric-val{font-size:12px;font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
+    .track{height:6px;border-radius:7px;background:#edf1f4;margin-top:7px;overflow:hidden}
+    .fill{height:100%;border-radius:7px;background:#4b88c4;transition:width .2s}
+    .rubric-desc{font-size:11px;color:var(--muted);margin-top:4px}
+    .na .rubric-top,.na .rubric-desc{color:#99a7b0}
+    .na .track{background:repeating-linear-gradient(90deg,#e8eef1,#e8eef1 6px,#f7f9fa 6px,#f7f9fa 12px)}
+    .callout{border-radius:12px;background:#eef5fa;color:#405f72;padding:10px 12px;font-size:12px;margin-top:17px}
+    .section-card{margin-top:18px}
+    .pill{font-weight:750;font-size:10px;padding:3px 7px;border-radius:6px;white-space:nowrap}
+    .pill.high{background:#fff0df;color:#9b5810}
+    .pill.medium{background:#e8f3fc;color:#38678e}
+    .suggestion{padding:14px 0;border-top:1px solid #e9eff3;display:flex;gap:12px;align-items:flex-start}
+    .suggestion:first-child{border-top:0}
+    .suggestion input{margin-top:5px;accent-color:var(--blue);width:17px;height:17px;cursor:pointer;flex:0 0 auto}
+    .suggestion-body{flex:1;min-width:0}
+    .suggestion-head{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+    .suggestion p{margin:4px 0 0;color:var(--muted);font-size:12px}
+    .hint{font-size:11px;color:#4f6c7c;background:#f0f5f8;padding:6px 8px;border-radius:8px;margin-top:7px}
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+    .revision{width:100%;min-height:236px;background:#f9fcff;border:1px solid #d4e1e8;border-radius:12px;padding:14px;resize:vertical;color:#223d4e;line-height:1.65;font-size:13px}
+    .seg{display:flex;gap:4px;align-items:center;border:1px solid #dbe6ec;border-radius:10px;padding:3px;background:#f5f8fa}
+    .seg button{border:0;background:transparent;font-size:12px;font-weight:700;border-radius:7px;padding:7px 10px;color:#657986}
+    .seg button[aria-pressed="true"]{background:#fff;box-shadow:0 1px 4px #d2dfe7;color:#1f557e}
+    .badgecount{border-radius:15px;padding:3px 8px;background:#eef4f8;color:#527084;font-size:11px;font-weight:750}
+    .footnotes{background:#e9eff3;border:1px solid #dce7ee;border-radius:14px;padding:15px 18px;margin-top:18px}
+    .footnotes p{margin:4px 0;font-size:12px;color:#5c7381}
+    details{font-size:12px;color:var(--muted);margin-top:10px}
+    summary{cursor:pointer;color:#346284;font-weight:650}
+    .empty{padding:21px 0;color:var(--muted);font-size:13px}
+    .muted-divider{height:1px;background:var(--line);margin:15px 0}
+    .status{color:var(--success);font-size:12px;font-weight:650;min-height:18px}
+    @media(max-width:880px){.layout,.two-col{grid-template-columns:1fr}.top{flex-direction:column;gap:10px}.shell{padding:19px 15px 35px}.card{padding:18px}.scorehead{gap:18px}}
+    @media(max-width:460px){.settings{grid-template-columns:1fr}.score-circle{width:105px;height:105px;flex-basis:105px}.number{font-size:35px}.score-title{font-size:17px}.section-top{flex-wrap:wrap}.btn{flex:1}}
+    @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
+  </style>
+</head>
+<body>
+<main class="shell">
+  <header class="top">
+    <div>
+      <div class="eyebrow">Personal AI toolkit · v1.0</div>
+      <h1>Prompt Quality Studio</h1>
+      <p class="lead">Improve a prompt <em>before</em> sending it to ChatGPT, Gemini, or another AI. Get a transparent score, specific suggestions, and a copy-ready revision.</p>
+    </div>
+    <div class="privacy"><span class="dot"></span> Offline · No uploads · No API key</div>
+  </header>
+
+  <div class="layout">
+    <section class="card" aria-labelledby="draft-heading">
+      <div class="section-top">
+        <div><h2 id="draft-heading">01 / Your draft prompt</h2><p class="sub">Paste a prompt. The analysis runs locally in this browser.</p></div>
+        <button class="btn sm ghost" id="sampleBtn" type="button">Try example</button>
+      </div>
+      <label class="fieldlabel" for="prompt">Prompt text</label>
+      <textarea id="prompt" placeholder="Example: Compare the financial stability of two companies over the last 3 years. Which appears less risky?" spellcheck="true" aria-describedby="promptStats"></textarea>
+      <div class="editor-foot"><span id="promptStats">0 words · ~0 tokens (rough estimate)</span><span>Shortcut: Ctrl/⌘ + Enter</span></div>
+      <div class="settings">
+        <div><label class="fieldlabel" for="taskMode">Task type</label>
+          <select id="taskMode"><option value="auto">Auto-detect</option><option value="quick">Quick / everyday</option><option value="research">Research / factual</option><option value="high">High-stakes / consequential</option></select>
+        </div>
+        <div><label class="fieldlabel" for="priority">Optimization priority</label>
+          <select id="priority"><option value="balanced">Balance quality and effort</option><option value="accuracy">Accuracy and verification</option><option value="lean">Minimal extra tokens</option></select>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="analyzeBtn">Analyze prompt <span class="kbd">↵</span></button>
+        <button class="btn" id="resetBtn">Clear</button>
+        <span id="analysisNote" class="small" role="status" aria-live="polite"></span>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="score-heading">
+      <div class="section-top"><div><h2 id="score-heading">02 / Alignment score</h2><p class="sub">Six criteria, adjusted to the kind of task</p></div><span class="badgecount" id="taskBadge">No prompt yet</span></div>
+      <div class="scorehead">
+        <div class="score-circle" id="scoreCircle" style="--progress:0"><div class="score-content"><div class="number" id="scoreNumber">—</div><div class="outof">out of 100</div></div></div>
+        <div><div class="score-title" id="scoreLabel">Ready to evaluate</div><div class="small" id="scoreExplanation">Add a prompt to see what is specified, missing, or unnecessary.</div><span class="tag" id="fitTag">Context-aware rubric</span></div>
+      </div>
+      <div id="rubricRows" aria-live="polite"><p class="empty">The six scoring categories will appear here.</p></div>
+      <div class="callout"><strong>Important:</strong> This is a rule-based assessment of prompt instructions, <em>not</em> a prediction or guarantee of answer accuracy. No live sources are checked.</div>
+      <details><summary>How the score works</summary><p>Original weights: clarity 20, accuracy 20, sources 20, verification 20, efficiency 10, output 10. For quick tasks, sources and independent verification may be marked <strong>not applicable</strong>; the remaining applicable scores are normalized to 100. Checks look for explicit wording and contextual clues, so the score is approximate and can miss implied intent, irony, negation, or unusual phrasing.</p></details>
+    </section>
+  </div>
+
+  <div class="two-col section-card">
+    <section class="card" aria-labelledby="suggestions-heading">
+      <div class="section-top"><div><h2 id="suggestions-heading">03 / Improvements to consider</h2><p class="sub">Check the ideas you'd like included in your revised prompt.</p></div><span class="badgecount" id="suggestionsCount">0 suggestions</span></div>
+      <div id="suggestions"><p class="empty">Analyze a prompt to see targeted suggestions.</p></div>
+      <div class="actions" id="toggleActions" hidden><button class="btn sm" id="selectAllBtn">Select all</button><button class="btn sm ghost" id="selectNoneBtn">Select none</button></div>
+    </section>
+
+    <section class="card" aria-labelledby="revision-heading">
+      <div class="section-top"><div><h2 id="revision-heading">04 / Improved, copy-ready prompt</h2><p class="sub">Keeps your original request intact; adds only the selected safeguards.</p></div></div>
+      <div class="section-top">
+        <div class="seg" role="group" aria-label="Revision detail"><button type="button" id="modeLean" aria-pressed="true">Compact</button><button type="button" id="modeThorough" aria-pressed="false">Thorough</button></div>
+        <span class="small" id="revisedStats">No revision yet</span>
+      </div>
+      <label class="fieldlabel" for="revised">Revised prompt (editable)</label>
+      <textarea class="revision" id="revised" placeholder="Your improved prompt will appear here. You can edit it before copying."></textarea>
+      <div class="actions" style="margin-top:13px">
+        <button class="btn primary" id="copyBtn" disabled>Copy revised prompt</button>
+        <button class="btn" id="downloadBtn" disabled>Save .txt</button>
+      </div>
+      <p class="status" id="copyStatus" aria-live="polite"></p>
+      <div class="callout" id="manualAdvice"><strong>Tip:</strong> The tool never invents missing dates, constraints, or facts. Add those yourself if the suggestions flag them.</div>
+    </section>
+  </div>
+
+  <footer class="footnotes">
+    <strong style="font-size:13px">Privacy and limitations</strong>
+    <p>Everything runs inside this HTML file, even without an internet connection. The tool does not send, save, or log your prompts; refreshing the page clears them. The approximate token count uses character length and is not an API billing measurement.</p>
+    <p>Evaluating actual answer accuracy requires source checking and/or independent review <em>after</em> the AI answers. A high prompt score cannot ensure the model follows instructions. Suitable for prompt preparation, not for fact verification.</p>
+  </footer>
+</main>
+<script>
+'use strict';
+(() => {
+  const el = (id) => document.getElementById(id);
+  const prompt = el('prompt');
+  const revised = el('revised');
+  const state = { analysis:null, suggestions:[], selected:new Set(), revisionMode:'compact', edited:false };
+  let timer;
+
+  const has = (txt, patterns) => patterns.some(p => p.test(txt));
+  const flags = (s) => {
+    const t = s.toLowerCase();
+    const f = {};
+    f.action = has(t,[/\b(explain|compare|analyse|analyze|summari[sz]e|draft|write|create|develop|design|evaluate|review|identify|calculate|recommend|assess|translate|rewrite|proofread|check|find|research|list|teach|plan|describe|help|advise|tell|show|provide|give|how|what|why|whether|which)\b/, /\?/]);
+    f.context = has(t,[/\b(i am|i'm|my |our |we are|we're|for me|for us|for a |for an |for the |audience|customer|employee|student|beginner|expert|context|background|scenario|given|attached|following|based on|assuming|using the)\b/]);
+    f.scope = has(t,[/\b(as of|in 20\d\d|in the last|over the last|during|until|between|exclude|excluding|include|only|specifically|within|limited to|focus on|under \$|in [a-z]+ law|region|country|jurisdiction|timeframe|scope|this week|today|currently|at most|no more than)\b/,/\b\d+\s*(words|pages|years|months|days|hours|characters|items|examples)\b/]);
+    f.goal = has(t,[/\b(goal|objective|purpose|so that|in order to|decision|prioriti[sz]e|criteria|success|must|should|need to|help me choose|looking for|aim to|trade-offs|tradeoffs)\b/]);
+    f.accuracy = has(t,[/\b(accurat(e|ely|cy)|correct(ness|ly)?|precis(e|ion)|factual(ly)?|reliable|avoid errors|avoid mistakes|fact[- ]check|evidence[- ]based)\b/]);
+    f.uncertainty = has(t,[/\b(uncertain(ty)?|limitations?|confidence|don't know|do not know|do not guess|don't guess|if (not|un)known|insufficient (information|evidence)|unknown|assumptions?|caveats?|qualification|speculat(e|ion)|flag gaps)\b/]);
+    f.distinction = has(t,[/\b(distinguish|separat(e|ely)|differentiat(e|ion)|clearly label|known facts|verified facts|opinion vs|fact vs|estimat(e|ion)s?\s+(vs|versus|from)|evidence from inference)\b/]);
+    f.sources = has(t,[/\b(cit(e|ation|ations|ed)|sources?|references?|bibliography|footnotes?|links? to (sources?|evidence)|provide (url|urls))\b/]);
+    f.primary = has(t,[/\b(primary sources?|original (research|documents?|sources?|data)|official (websites?|documents?|statistics|sources?|reports?)|peer[- ]reviewed|government (data|sources?|websites?)|regulator(y|s)|standards? (body|organization)|authoritative|firsthand evidence)\b/]);
+    f.dates = has(t,[/\b(publication dates?|published (on|in|when)|last updated|effective dates?|current version|most recent|up[- ]to[- ]date|latest sources?|as of)\b/]);
+    f.links = has(t,[/\b(urls?|hyperlinks?|direct links?|source links?|links? to (the|original)|links? for each)\b/]);
+    f.verify = has(t,[/\b(verif(y|ied|ying|ication)|fact[- ]check|cross[- ]check|double[- ]check|check (the|each|key|important|major|material) (claims?|facts?|sources?)|validate|substantiat(e|ion)|audit (the|each))\b/]);
+    f.independent = has(t,[/\b(independent(ly)?|multiple (independent )?sources?|at least (two|2|three|3) sources?|cross[- ]reference|second source|corroborat(e|ion)|triangulat(e|ion))\b/]);
+    f.conflicts = has(t,[/\b(conflict(ing|s)?|contradictions?|discrepanc(y|ies)|unsupported|missing evidence|source does not support|flag (issues?|errors?|gaps)|if sources disagree|unresolved)\b/]);
+    f.concise = has(t,[/\b(short|brief|succinct)\s+(email|message|letter|summary|reply|answer|response|paragraph|explanation|post)\b/,/\b(concis(e|ely)|brief(ly)?|short answer|succinct(ly)?|to the point|in \d+ words|maximum \d+ words|under \d+ words|no more than \d+ (words|sentences|paragraphs)|bullet points? only)\b/]);
+    f.efficient = has(t,[/\b(token(s| cost)?|tocken(s)?|cost[- ]efficien(t|cy)|minimi[sz]e (tokens?|length|cost|effort)|avoid unnecessary|don't overthink|do not overthink|no extra research|research only if|only when necessary|save (time|tokens?))\b/]);
+    f.noFluff = has(t,[/\b(no fluff|no filler|avoid repetition|without repetition|no preamble|no unnecessary background|skip (the )?intro|no generic background|don't repeat|do not repeat)\b/]);
+    f.format = has(t,[/\b(table|bullets?|numbered list|steps?|markdown|json|csv|outline|headings?|summary|executive summary|paragraphs?|checklist|template|spreadsheet|html|report|format|sections?|code block|pros and cons|email|message|letter|poem|story|script|caption|post|essay|memo|slide deck)\b/]);
+    f.depth = has(t,[/\b(detailed|in[- ]depth|comprehensive|overview|beginner[- ]friendly|expert[- ]level|technical|simple terms|plain (language|english)|\d+ examples?|one[- ]page|one sentence|\d+ points?|key takeaways?|short|brief|thorough|concise|no more than|maximum \d+)\b/]);
+    f.creative = has(t,[/\b(write|draft|rewrite|polish|compose|brainstorm|make up|create)\b.{0,90}\b(poem|story|fiction|email|message|caption|slogan|script|invitation|dialogue|headline|description|post|letter)\b/,/\b(translate|proofread|fix grammar|rewrite this)\b/]);
+    f.factual = has(t,[/\b(research|evidence|compare|statistics|data|study|scientific|reliable|sources?|cite|current|latest|news|facts?|verify|accuracy|laws?|regulations?|prices?|rates?|medical|finance|legal|history|policy|industry|market|report)\b/]);
+    f.highRisk = has(t,[/\b(for an? investor|should i (buy|sell|invest)|investment decision|which stocks?|retirement planning)\b/,/\b(diagnos(e|is)|treatment|medication|dosage|clinical decision|healthcare decision|surgery|prescription|medical advice|legal advice|lawsuit|contract liability|tax filing|tax advice|investment advice|portfolio allocation|regulatory compliance|compliance decision|financial decision|bankruptcy|retirement savings|safety[- ]critical|hazard|emergency)\b/]);
+    f.needsFreshness = has(t,[/\b(today|currently|latest|recent|newest|as of|this week|this month|202[4-9]|prices?|rates?|current|effective date|changing|up[- ]to[- ]date)\b/]);
+    f.needsJurisdiction = has(t,[/\b(law|legal|regulation|tax|compliance|employment rights|policy requirement|visa|license|court)\b/]);
+    return f;
+  };
+  const words = s => (s.trim().match(/\S+/g) || []).length;
+  const tokens = s => Math.max(0, Math.round(s.length / 4));
+  const taskType = (f, mode) => {
+    if (mode !== 'auto') return mode;
+    if (f.highRisk) return 'high';
+    if (f.factual || f.needsFreshness) return 'research';
+    return 'quick';
+  };
+  const labels = {quick:'Quick task', research:'Research task', high:'High-stakes task'};
+  const toScore = (name,max,earned,desc,applicable=true) => ({name,max,earned,desc,applicable});
+
+  function evaluate(text, mode, priority){
+    const f = flags(text);
+    const task = taskType(f,mode);
+    const applicable = { sources:task!=='quick', verify:task!=='quick', accuracy:!(task==='quick' && f.creative && !f.factual) };
+    const w = words(text);
+    const rubric = [];
+    const selfContained = task==='quick' && f.action && w>=6 && !/\b(it|that thing|something|the above)\b/i.test(text);
+    const clarityPoints = Math.min(20,Math.max(selfContained?17:0,4+(f.action?5:0)+(f.context?4:0)+(f.scope?4:0)+(f.goal?3:0)));
+    rubric.push(toScore('Task clarity',20,clarityPoints,
+      selfContained?'Direct request; extra context is optional':!f.action?'State the intended action explicitly':!f.scope?'Scope, timeframe, or constraints may help':'Goal and boundaries are more explicit'));
+    const accuracyPoints = task==='quick' ? Math.min(20,12+(f.accuracy?4:0)+(f.uncertainty?2:0)+(f.distinction?2:0)) : 4+(f.accuracy?7:0)+(f.uncertainty?5:0)+(f.distinction?4:0);
+    rubric.push(toScore('Accuracy guidance',20,accuracyPoints,
+      task==='quick'?'Ordinary factual question; elaborate caveats are optional':!f.accuracy?'No explicit accuracy requirement':!f.uncertainty?'Uncertainty handling is not specified':'Accuracy-related instructions detected',applicable.accuracy));
+    rubric.push(toScore('Source reliability',20,(f.sources?6:0)+(f.primary?8:0)+(f.dates?3:0)+(f.links?3:0),
+      !f.sources?'No source request':!f.primary?'Authority or primary-source preference missing':'Source requirements detected',applicable.sources));
+    rubric.push(toScore('Verification',20,(f.verify?8:0)+(f.independent?6:0)+(f.conflicts?6:0),
+      !f.verify?'No explicit claim-checking request':!f.independent?'Independent cross-checks not specified':'Verification requirements detected',applicable.verify));
+    const efficiencyPoints = task==='quick' && w<=100 ? 10 : (f.concise?4:0)+(f.efficient?3:0)+(f.noFluff?1:0)+(w<=100?2:0);
+    rubric.push(toScore('Token efficiency',10,efficiencyPoints,
+      task==='quick' && w<=100?'Already brief; extra efficiency instructions usually unnecessary':!f.concise?'No response length guidance':!f.efficient?'No instruction to limit unnecessary work':'Efficiency guidance detected'));
+    const outputPoints = task==='quick' && selfContained ? Math.max(8,(f.format?5:0)+(f.depth?5:0)) : (f.format?5:0)+(f.depth?5:0);
+    rubric.push(toScore('Output instructions',10,outputPoints,
+      task==='quick' && selfContained?'Default output is clear enough for a quick request':!f.format?'Output format unspecified':!f.depth?'Level of detail unspecified':'Output preferences detected'));
+    const used = rubric.filter(r=>r.applicable);
+    const score = Math.round(100 * used.reduce((x,r)=>x+r.earned,0)/used.reduce((x,r)=>x+r.max,0));
+    const suggestions = makeSuggestions(f,task,priority,w);
+    return {f,task,priority,rubric,score,suggestions,w};
+  }
+
+  function makeSuggestions(f,task,priority,w){
+    const items=[];
+    const add=(id,cat,importance,title,why,compact,thorough,manual=false)=>items.push({id,cat,importance,title,why,compact,thorough,manual});
+    if (!f.action) add('action','Clarity',10,'Specify a concrete deliverable','Say what the AI should actually do, rather than only providing a topic.','', '',true);
+    if (!f.scope && (task!=='quick' || w>28)) add('scope','Clarity',8,'Add the scope and decision context','Include the relevant audience, comparison, period, jurisdiction, exclusions, or constraints. Supply real specifics; this tool will not invent them.','','',true);
+    if (!f.goal && task==='high') add('purpose','Clarity',8,'State what decision the answer supports','Name the decision or acceptance criteria so the answer focuses on the factors that matter.','','',true);
+    if (task !== 'quick' && !f.sources) add('sources','Sources',10,'Ask for traceable evidence','Links and dates help you check whether claims are supported.','For material factual claims, give source links and publication dates.','For material factual claims, cite original sources with direct URLs and relevant publication or effective dates. Do not invent citations.');
+    if (task !== 'quick' && !f.primary) add('primary','Sources',9,'Prioritize original, authoritative sources','Primary sources help avoid repeating weak secondary claims.','Prefer official or original sources when available.','Prefer primary evidence such as original research, official data, standards, or regulations; distinguish source quality.');
+    if (task !== 'quick' && !f.verify) add('verify','Verification',10,'Define a focused verification step','Checking the biggest claims is more useful than asking “are you sure?”.','Verify the 2–3 most important factual claims against their cited sources.','Verify the most consequential factual claims against the original material and say which claims were actually checked.');
+    if (task === 'high' && !f.independent) add('independent','Verification',9,'Require independent corroboration','For consequential conclusions, one source is often not enough.','Seek an independent source for consequential claims.','Where practical, cross-check consequential conclusions against independent evidence, not repeated copies of one report.');
+    if (task !== 'quick' && !f.conflicts) add('conflicts','Verification',7,'Explain unresolved disagreements','The answer should disclose contradictions rather than silently choose one side.','Flag conflicting evidence and unresolved gaps.','Describe conflicts between sources, unsupported claims, and what remains unverified.');
+    if (!(task==='quick' && f.creative && !f.factual) && !f.uncertainty) add('uncertainty','Accuracy',9,'Require honest uncertainty handling','This reduces the risk of unsupported overconfidence.','State important assumptions and uncertainty; do not guess.','Separate established facts, assumptions, and interpretations. If evidence is insufficient, say so rather than guessing.');
+    if (!f.concise && !(task==='quick' && w<=60)) add('concise','Efficiency',priority==='lean'?10:5,'Set a sensible response length','Control output length without suppressing essential evidence.','Be concise; expand only when necessary.','Start with a concise answer and add only the explanation necessary to support the conclusion.');
+    if (!f.efficient && task!=='high' && !(task==='quick' && w<=60)) add('efficiency','Efficiency',priority==='lean'?9:4,'Avoid unnecessary research or reasoning','Reserve expensive steps for the questions where they improve the outcome.','Avoid unnecessary research, repetition, and detail.','Use research and additional reasoning only where they materially improve accuracy or usefulness; avoid redundant explanation.');
+    if (!f.format && !(task==='quick' && w<=60)) add('format','Output',6,'Specify the response structure','A predictable output is easier to inspect and reuse.',task==='quick'?'Answer directly in a short paragraph.':'Give a direct answer, then supporting evidence and remaining uncertainties.',task==='quick'?'Provide the requested result first, followed by only essential detail.':'Use three sections: conclusion, supporting evidence, and limitations or unresolved questions.');
+    if (!f.depth && task==='high') add('depth','Output',5,'Set the depth required','Request decision-relevant detail without turning the answer into a generic essay.','Focus on decision-relevant risks and trade-offs.','Cover material trade-offs, risks, and assumptions in proportion to their impact.');
+    if (f.needsFreshness && task!=='quick' && !f.dates) add('freshness','Sources',8,'Specify date sensitivity','Current facts can change quickly, so the answer should state when each source applies.','Use current sources and state their applicable dates.','Check whether key sources remain current, and note the date or version to which they apply.');
+    if (f.needsJurisdiction && !f.scope) add('jurisdiction','Clarity',9,'Identify the applicable jurisdiction','For law, tax, and regulation, the applicable country or region can change the answer.','','',true);
+    if (w>280 && !f.noFluff) add('long','Efficiency',6,'Consider trimming redundant context','Long prompts are fine when all details matter, but repeated instructions can reduce clarity.','','',true);
+    // Never add an unnecessary verification burden to everyday creative or quick tasks.
+    items.sort((a,b)=>b.importance-a.importance || a.title.localeCompare(b.title));
+    return items;
+  }
+
+  function renderAnalysis(data) {
+    el('taskBadge').textContent = labels[data.task];
+    el('scoreCircle').style.setProperty('--progress',data.score);
+    el('scoreNumber').textContent = data.score;
+    const label = data.score>=80?'Well specified':data.score>=60?'Solid starting point':data.score>=40?'Room to strengthen':'Needs clearer instructions';
+    el('scoreLabel').textContent=label;
+    const na = data.rubric.filter(x=>!x.applicable).length;
+    el('scoreExplanation').textContent = `Estimated alignment for a ${labels[data.task].toLowerCase()}. ${na ? na+' category'+(na>1?'ies':'')+' not applicable.':'All six categories apply.'}`;
+    el('fitTag').textContent = data.task==='high'?'Stricter source checks':data.task==='research'?'Evidence-aware score':'Lightweight task score';
+    el('rubricRows').replaceChildren();
+    data.rubric.forEach(r=>{
+      const container=document.createElement('div');container.className='rubric-row'+(r.applicable?'':' na');
+      const top=document.createElement('div');top.className='rubric-top';
+      const left=document.createElement('span');left.textContent=r.name;
+      const right=document.createElement('span');right.className='rubric-val';right.textContent=r.applicable?`${r.earned} / ${r.max}`:'N/A';
+      top.append(left,right);
+      const bar=document.createElement('div');bar.className='track';
+      if(r.applicable){const fill=document.createElement('div');fill.className='fill';fill.style.width=`${100*r.earned/r.max}%`;bar.append(fill)}
+      const desc=document.createElement('div');desc.className='rubric-desc';desc.textContent=r.applicable?r.desc:'Not required for this task type';
+      container.append(top,bar,desc);el('rubricRows').append(container);
+    });
+  }
+
+  function renderSuggestions(data,resetSelections) {
+    state.suggestions=data.suggestions;
+    if (resetSelections) {
+      const limit=data.priority==='lean'?2:data.priority==='accuracy'?5:4;
+      const available=data.suggestions.filter(x=>!x.manual);
+      state.selected=new Set(available.slice(0,limit).map(x=>x.id));
+    } else {
+      state.selected=new Set([...state.selected].filter(x=>data.suggestions.some(s=>s.id===x)));
+    }
+    const wrap=el('suggestions');wrap.replaceChildren();
+    const count=data.suggestions.length;
+    el('suggestionsCount').textContent=count+' suggestion'+(count===1?'':'s');
+    el('toggleActions').hidden = count===0 || data.suggestions.every(x=>x.manual);
+    if(!count){const p=document.createElement('p');p.className='empty';p.textContent='No obvious wording gaps found by these rules. Actual answer quality still needs checking.';wrap.append(p);return}
+    for(const s of data.suggestions){
+      const row=document.createElement('div');row.className='suggestion';
+      const inp=document.createElement('input');inp.type='checkbox';inp.id='suggest-'+s.id;inp.checked=state.selected.has(s.id);inp.disabled=s.manual;inp.setAttribute('aria-label','Include suggestion: '+s.title);
+      inp.addEventListener('change',()=>{if(inp.checked)state.selected.add(s.id);else state.selected.delete(s.id);buildRevision();});
+      const body=document.createElement('div');body.className='suggestion-body';
+      const head=document.createElement('div');head.className='suggestion-head';
+      const title=document.createElement('label');title.htmlFor=inp.id;title.style.fontWeight='730';title.style.fontSize='13px';title.textContent=s.title;
+      const pill=document.createElement('span');pill.className='pill '+(s.importance>=8?'high':'medium');pill.textContent=s.manual?'Manual':s.importance>=8?'High impact':'Helpful';head.append(title,pill);
+      const desc=document.createElement('p');desc.textContent=s.why;
+      body.append(head,desc);
+      if(s.manual){const hint=document.createElement('div');hint.className='hint';hint.textContent='Needs your real context; not automatically inserted.';body.append(hint)}
+      row.append(inp,body);wrap.append(row);
+    }
+  }
+
+  function buildRevision(){
+    const base=prompt.value.trim();
+    if(!base){revised.value='';el('revisedStats').textContent='No revision yet';el('copyBtn').disabled=true;el('downloadBtn').disabled=true;return}
+    const selected=state.suggestions.filter(s=>state.selected.has(s.id)&&!s.manual);
+    // The two modes alter wording, not the user's original instruction.
+    const extras=selected.map(s=>state.revisionMode==='thorough'?s.thorough:s.compact).filter(Boolean);
+    revised.value=base+(extras.length?'\n\nResponse requirements:\n'+extras.map(s=>'• '+s).join('\n'):'');
+    state.edited=false;
+    el('copyBtn').disabled=false;el('downloadBtn').disabled=false;
+    updateRevisedStats();
+  }
+  function updateRevisedStats(){const extra=tokens(revised.value)-tokens(prompt.value.trim());el('revisedStats').textContent=words(revised.value)+' words · ~'+tokens(revised.value)+' tokens'+(extra>0?' (+'+extra+' added)':'');}
+  function updateStats(){const str=prompt.value;el('promptStats').textContent=words(str)+' words · ~'+tokens(str)+' tokens (rough estimate)';}
+  function analyze(){
+    updateStats();
+    const str=prompt.value.trim();
+    if(!str){resetScore();return}
+    state.analysis=evaluate(str,el('taskMode').value,el('priority').value);
+    renderAnalysis(state.analysis);
+    renderSuggestions(state.analysis,true);
+    buildRevision();
+    el('analysisNote').textContent='Updated locally';
+    el('copyStatus').textContent='';
+  }
+  function resetScore(){
+    state.analysis=null;state.selected.clear();state.suggestions=[];
+    el('scoreNumber').textContent='—';el('scoreCircle').style.setProperty('--progress',0);
+    el('scoreLabel').textContent='Ready to evaluate';
+    el('scoreExplanation').textContent='Add a prompt to see what is specified, missing, or unnecessary.';
+    el('taskBadge').textContent='No prompt yet';el('fitTag').textContent='Context-aware rubric';
+    el('rubricRows').innerHTML='<p class="empty">The six scoring categories will appear here.</p>';
+    el('suggestions').innerHTML='<p class="empty">Analyze a prompt to see targeted suggestions.</p>';
+    el('suggestionsCount').textContent='0 suggestions';el('toggleActions').hidden=true;
+    el('analysisNote').textContent='';el('copyStatus').textContent='';buildRevision();
+  }
+  function delayedAnalyze(){updateStats();clearTimeout(timer);timer=setTimeout(analyze,250)}
+  prompt.addEventListener('input',delayedAnalyze);
+  el('taskMode').addEventListener('change',analyze);
+  el('priority').addEventListener('change',analyze);
+  el('analyzeBtn').addEventListener('click',analyze);
+  el('resetBtn').addEventListener('click',()=>{prompt.value='';resetScore();updateStats();prompt.focus()});
+  el('sampleBtn').addEventListener('click',()=>{
+    prompt.value='Compare the long-term financial stability of Company A and Company B over the last three years. Which looks less risky for a cautious investor?';
+    el('taskMode').value='auto';el('priority').value='balanced';analyze();prompt.focus();
+  });
+  document.addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();analyze()}});
+  el('modeLean').addEventListener('click',()=>{state.revisionMode='compact';el('modeLean').setAttribute('aria-pressed','true');el('modeThorough').setAttribute('aria-pressed','false');buildRevision()});
+  el('modeThorough').addEventListener('click',()=>{state.revisionMode='thorough';el('modeLean').setAttribute('aria-pressed','false');el('modeThorough').setAttribute('aria-pressed','true');buildRevision()});
+  el('selectAllBtn').addEventListener('click',()=>{state.selected=new Set(state.suggestions.filter(s=>!s.manual).map(s=>s.id));renderSuggestions(state.analysis,false);buildRevision()});
+  el('selectNoneBtn').addEventListener('click',()=>{state.selected.clear();renderSuggestions(state.analysis,false);buildRevision()});
+  revised.addEventListener('input',()=>{state.edited=true;updateRevisedStats()});
+  async function copyText(t){
+    if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(t);return true}
+    // file:// may not expose the modern clipboard API.
+    const hidden=document.createElement('textarea');hidden.value=t;hidden.style.position='fixed';hidden.style.opacity='0';document.body.append(hidden);hidden.focus();hidden.select();
+    const copied=document.execCommand('copy');hidden.remove();if(!copied)throw new Error('Clipboard blocked');return true;
+  }
+  el('copyBtn').addEventListener('click',async()=>{
+    if(!revised.value.trim())return;
+    try{await copyText(revised.value);el('copyStatus').textContent='Copied. Paste into your AI chat.'}
+    catch(e){revised.focus();revised.select();el('copyStatus').textContent='Clipboard access blocked. Prompt selected—press Ctrl/⌘ + C.'}
+  });
+  el('downloadBtn').addEventListener('click',()=>{
+    if(!revised.value.trim())return;
+    const blob=new Blob([revised.value+'\n'],{type:'text/plain;charset=utf-8'});
+    const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='improved-prompt.txt';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
+    el('copyStatus').textContent='Prompt saved as a text file.';
+  });
+  updateStats();
+})();
+</script>
+</body>
+</html>
